@@ -14,18 +14,18 @@ func Read() (Config, error){
 
     file, err := os.Open(configPath)
     if err != nil {
-        return config, fmt.Errorf("Error getting file: %s",err) 
+        return config, fmt.Errorf("Error getting file: %s\n",err) 
     }
     defer file.Close()
 
     data, err := io.ReadAll(file)
     if err != nil{
-        return config, fmt.Errorf("Error reading data: %s",err) 
+        return config, fmt.Errorf("Error reading data: %s\n",err) 
     }
     
     err = json.Unmarshal(data, &config)
     if err != nil{
-        return config, fmt.Errorf("Error unmarshalling file: %s",err) 
+        return config, fmt.Errorf("Error unmarshalling file: %s\n",err) 
     }
     return config, nil
 }
