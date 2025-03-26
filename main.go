@@ -28,6 +28,8 @@ func main(){
     cmds.command = make(map[string]func(*state, command) error)
     cmds.register("login", handlerLogin)
     cmds.register("register", handlerRegister)
+    cmds.register("reset", handlerReset)
+    cmds.register("users", handlerGetUsers)
     //Command line arguments passed by the user
     args := os.Args
     if len(args) < 2 {
