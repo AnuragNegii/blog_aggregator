@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"time"
+
 	"github.com/AnuragNegii/blog_aggregator/internal/database"
 	"github.com/google/uuid"
 )
@@ -78,5 +79,46 @@ func handlerGetUsers(s *state, cmd command) error{
         }
         fmt.Println(users[user])
     }
+    return nil
+}
+
+func handlerAgg(s *state, cmd command) error{
+	ctx := context.Background()
+	feed, err := fetchFeed(ctx, "https://www.wagslane.dev/index.xml")
+	if err != nil {
+		return err 
+	}
+	fmt.Println(feed.Channel.Item[0].Title)
+	fmt.Println(feed.Channel.Item[0].Description)
+
+
+    return nil
+}
+
+
+func handlerAddFeed(s *state, cmd command) error{
+	ctx := context.Background()
+	if len(cmd.args)< 2{
+		return fmt.Errorf("usage: addfeed <name> url <url>")
+	}
+	feedName  := cmd.args[0]
+	feedURL := cmd.args[1]
+	currentUser, err  :=  s.db.GetUser(ctx, s.config.CurrentUserName)
+	if err != nil{
+		return err
+	}
+	feed, err := s.db.CreateFeed(ctx, database.CreateFeedParams{
+		ID: uuid.New(),
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+		Name: feedName,
+		Url: feedURL,
+		UserID: currentUser.ID,
+	})
+	if err != nil{
+		return fmt.Errorf("Could not create feed: %v", err) 
+	}
+ 	// Print the feed details
+    fmt.Printf("Feed created: %+v\n", feed)
     return nil
 }
