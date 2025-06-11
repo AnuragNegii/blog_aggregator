@@ -91,3 +91,13 @@ func printUser(user database.User){
 	fmt.Printf(" * Name:    %v\n", user.Name)	
 }
 
+func handlerAgg(s *state, cmd command) error {
+	url := "https://www.wagslane.dev/index.xml"
+	ctx := context.Background()
+	feed, err := fetchFeed(ctx, url)
+	if err != nil{
+		return err
+	}
+	fmt.Printf("%v\n", feed)
+	return nil
+}

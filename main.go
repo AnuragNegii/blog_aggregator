@@ -4,9 +4,10 @@ import (
 	"database/sql"
 	"log"
 	"os"
-	_ "github.com/lib/pq"
+
 	config "github.com/AnuragNegii/blog_aggreagator/internal/config"
 	"github.com/AnuragNegii/blog_aggreagator/internal/database"
+	_ "github.com/lib/pq"
 )
 
 type state struct {
@@ -40,6 +41,7 @@ func main(){
 	cmds.register("register", registerUser)
 	cmds.register("reset", resetTable)
 	cmds.register("users", getAllUsers)
+	cmds.register("agg", handlerAgg)
 
 	if len(os.Args) < 2 {
 		log.Fatal("no command given")
