@@ -134,3 +134,18 @@ func addFeed(s *state, cmd command) error{
 
 	return nil
 }
+
+func handlerFeeds(s *state, cmd command) error{
+	ctx := context.Background()
+	feeds, err := s.db.GetFeeds(ctx)
+	if err != nil {
+		return fmt.Errorf("error retrieving feeds: %v", err)
+	}
+
+	for _, feed := range feeds {
+		fmt.Printf("Feed: %v\n", feed.Name)
+		fmt.Printf("URL: %v\n", feed.Url)
+		fmt.Printf("username: %v\n", feed.Username)
+	}
+	return nil
+}
