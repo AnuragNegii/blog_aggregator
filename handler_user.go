@@ -149,3 +149,56 @@ func handlerFeeds(s *state, cmd command) error{
 	}
 	return nil
 }
+
+func handlerFollow(s *state, cmd command) error{
+	if len(cmd.Args) < 3 {
+		return errors.New("too few arguments")
+	}
+	url := cmd.Args[2]
+
+	ctx := context.Background()
+	user, err := s.db.GetUser(ctx, s.cfg.CurrentUserName)
+	if err != nil {
+		return fmt.Errorf("error with retrieving users data")
+	}
+
+	feed, err := s.db.GetFeed(ctx, sql.NullString{String: url, Valid: true})
+	if err != nil {
+		return fmt.Errorf("error retrieving feed: %v\n", err)
+	}
+
+	insertedFeedFollow, err := s.db.CreateFeedFollow(ctx, database.CreateFeedFollowParams{
+		UserID: user.ID,
+		FeedID: feed.ID,
+	})
+	if err != nil {
+		return fmt.Errorf("error while following: %v", err)
+	}
+	
+	fmt.Printf("Followed the feed of this url:%v\n", url)
+
+	fmt.Printf("feed Name : %v\n", insertedFeedFollow.FeedName)
+	fmt.Printf("followed by :%v\n", insertedFeedFollow.UserName)
+
+	return nil
+}
+
+func handlerFollowing(s *state, cmd command) error{
+	ctx := context.Background()
+	user, err := s.db.GetUser(ctx, s.cfg.CurrentUserName)
+	if err != nil {
+		return fmt.Errorf("error retrieving currentUser: %v", err)
+	}
+
+	feedFollow, err := s.db.GetFeedFollowsForUser(ctx, user.ID)
+	if err != nil {
+		return fmt.Errorf("error retrieving userFollowList: %v", err)
+	}
+
+	fmt.Print("Feeds That user follows")
+	for _, followList := range feedFollow {
+		fmt.Printf("%v\n", followList.Feedname)
+	}
+
+	return nil
+}
