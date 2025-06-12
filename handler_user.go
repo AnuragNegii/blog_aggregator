@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"time"
+	"database/sql"
 
 	"github.com/AnuragNegii/blog_aggreagator/internal/database"
 	"github.com/google/uuid"
@@ -16,7 +17,7 @@ func resetTable(s *state, cmd command) error{
 		return fmt.Errorf("cant reset table: %v \n", err)
 	}
 
-	fmt.Println("Table reset")
+	fmt.Println("Tables reset")
 	return nil
 }
 
@@ -99,5 +100,37 @@ func handlerAgg(s *state, cmd command) error {
 		return err
 	}
 	fmt.Printf("%v\n", feed)
+	return nil
+}
+
+func addFeed(s *state, cmd command) error{
+	if len(cmd.Args) < 3{
+		return fmt.Errorf("Not enough arguments for addFeed command %v, %v, %v", cmd.Args[0], cmd.Args[1], cmd.Args[2])
+	}
+
+	ctx := context.Background()
+	user, err := s.db.GetUser(ctx, s.cfg.CurrentUserName)
+	if err != nil {
+		return fmt.Errorf("error retrieving CurrentUserName: %v\n", err)
+	}
+	name := cmd.Args[1]
+	providedURL := cmd.Args[2]
+
+	feed, err := s.db.CreateFeed(ctx, database.CreateFeedParams{
+		ID: uuid.New(),	
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+		Name: name,	
+		Url: sql.NullString{String: providedURL, Valid: true},
+		UserID: uuid.NullUUID{UUID: user.ID, Valid: true},
+	})
+	if err != nil {
+		return fmt.Errorf("Something went wrong while trying to add feed: %v", err) 
+	}
+	fmt.Printf("Feed created successfully\n")
+	fmt.Printf("Feed Id: %v\n", feed.ID)
+	fmt.Printf("Feed Name: %v\n", feed.Name)
+	fmt.Printf("Feed url: %v\n", feed.Url)
+
 	return nil
 }

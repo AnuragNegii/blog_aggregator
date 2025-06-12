@@ -10,7 +10,7 @@ import (
 )
 
 const deleteTable = `-- name: DeleteTable :exec
-TRUNCATE TABLE users
+TRUNCATE TABLE feeds, users
 `
 
 func (q *Queries) DeleteTable(ctx context.Context) error {

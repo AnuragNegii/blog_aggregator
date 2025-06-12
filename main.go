@@ -42,6 +42,7 @@ func main(){
 	cmds.register("reset", resetTable)
 	cmds.register("users", getAllUsers)
 	cmds.register("agg", handlerAgg)
+	cmds.register("addfeed", addFeed)
 
 	if len(os.Args) < 2 {
 		log.Fatal("no command given")
