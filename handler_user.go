@@ -132,6 +132,21 @@ func addFeed(s *state, cmd command) error{
 	fmt.Printf("Feed Name: %v\n", feed.Name)
 	fmt.Printf("Feed url: %v\n", feed.Url)
 
+	insertedFeedFollow, err := s.db.CreateFeedFollow(ctx, database.CreateFeedFollowParams{
+		ID: uuid.New(),
+		UserID: user.ID,
+		FeedID: feed.ID,
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+	})
+	if err != nil {
+
+		return fmt.Errorf("error while following: %v", err)
+	}
+
+	fmt.Printf("feed Name : %v\n", insertedFeedFollow.FeedName)
+	fmt.Printf("Now followed by :%v\n", insertedFeedFollow.UserName)
+	
 	return nil
 }
 
@@ -151,10 +166,10 @@ func handlerFeeds(s *state, cmd command) error{
 }
 
 func handlerFollow(s *state, cmd command) error{
-	if len(cmd.Args) < 3 {
-		return errors.New("too few arguments")
+	if len(cmd.Args) < 2 {
+		return fmt.Errorf("too few arguments\n")
 	}
-	url := cmd.Args[2]
+	url := cmd.Args[1]
 
 	ctx := context.Background()
 	user, err := s.db.GetUser(ctx, s.cfg.CurrentUserName)
@@ -168,8 +183,11 @@ func handlerFollow(s *state, cmd command) error{
 	}
 
 	insertedFeedFollow, err := s.db.CreateFeedFollow(ctx, database.CreateFeedFollowParams{
+		ID: uuid.New(),
 		UserID: user.ID,
 		FeedID: feed.ID,
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
 	})
 	if err != nil {
 		return fmt.Errorf("error while following: %v", err)
