@@ -103,16 +103,12 @@ func handlerAgg(s *state, cmd command) error {
 	return nil
 }
 
-func addFeed(s *state, cmd command) error{
+func addFeed(s *state, cmd command, user database.User) error{
 	if len(cmd.Args) < 3{
 		return fmt.Errorf("Not enough arguments for addFeed command %v, %v, %v", cmd.Args[0], cmd.Args[1], cmd.Args[2])
 	}
 
 	ctx := context.Background()
-	user, err := s.db.GetUser(ctx, s.cfg.CurrentUserName)
-	if err != nil {
-		return fmt.Errorf("error retrieving CurrentUserName: %v\n", err)
-	}
 	name := cmd.Args[1]
 	providedURL := cmd.Args[2]
 
@@ -165,18 +161,13 @@ func handlerFeeds(s *state, cmd command) error{
 	return nil
 }
 
-func handlerFollow(s *state, cmd command) error{
+func handlerFollow(s *state, cmd command, user database.User) error{
 	if len(cmd.Args) < 2 {
 		return fmt.Errorf("too few arguments\n")
 	}
 	url := cmd.Args[1]
 
 	ctx := context.Background()
-	user, err := s.db.GetUser(ctx, s.cfg.CurrentUserName)
-	if err != nil {
-		return fmt.Errorf("error with retrieving users data")
-	}
-
 	feed, err := s.db.GetFeed(ctx, sql.NullString{String: url, Valid: true})
 	if err != nil {
 		return fmt.Errorf("error retrieving feed: %v\n", err)
@@ -201,13 +192,8 @@ func handlerFollow(s *state, cmd command) error{
 	return nil
 }
 
-func handlerFollowing(s *state, cmd command) error{
+func handlerFollowing(s *state, cmd command, user database.User) error{
 	ctx := context.Background()
-	user, err := s.db.GetUser(ctx, s.cfg.CurrentUserName)
-	if err != nil {
-		return fmt.Errorf("error retrieving currentUser: %v", err)
-	}
-
 	feedFollow, err := s.db.GetFeedFollowsForUser(ctx, user.ID)
 	if err != nil {
 		return fmt.Errorf("error retrieving userFollowList: %v", err)
@@ -219,4 +205,14 @@ func handlerFollowing(s *state, cmd command) error{
 	}
 
 	return nil
+}
+
+func middlewareLoggedIn(handler func(s * state, cmd command, user database.User) error) func(*state, command)error {
+	return func(s *state, cmd command)error {
+		user, err := s.db.GetUser(context.Background(), s.cfg.CurrentUserName)
+		if err != nil{
+			return fmt.Errorf("error getting current user %v\n", err)
+		}
+		return handler(s, cmd, user)
+	}
 }
