@@ -92,15 +92,29 @@ func printUser(user database.User){
 	fmt.Printf(" * Name:    %v\n", user.Name)	
 }
 
-func handlerAgg(s *state, cmd command) error {
-	url := "https://www.wagslane.dev/index.xml"
-	ctx := context.Background()
-	feed, err := fetchFeed(ctx, url)
-	if err != nil{
-		return err
+func handlerAgg(s *state, cmd command, user database.User) error {
+	if len(cmd.Args) < 2 {
+		return fmt.Errorf("Not enough arguments\n")
 	}
-	fmt.Printf("%v\n", feed)
-	return nil
+	t, err := time.ParseDuration(cmd.Args[1])
+	if err != nil {
+		return fmt.Errorf("error parsing time: %v\n", err)
+	}
+	moreThanThis, err := time.ParseDuration("10s")
+	if err != nil {
+		return fmt.Errorf("error while setting own time.")
+	}
+	if t < moreThanThis{
+		return fmt.Errorf("time should be at least 10s.")
+	}
+
+	ticker := time.NewTicker(t)
+	fmt.Printf("Collecting feeds every %v\n", t)
+	for ;; <-ticker.C {
+		if err  = ScrapeFeed(s, cmd, user); err != nil {
+			fmt.Printf("error while scraping feed: %v\n", err)
+		}
+	}
 }
 
 func addFeed(s *state, cmd command, user database.User) error{
@@ -207,6 +221,46 @@ func handlerFollowing(s *state, cmd command, user database.User) error{
 	return nil
 }
 
+func handlerUnfollow(s *state, cmd command, user database.User) error{
+	if len(cmd.Args) < 2 {
+		return fmt.Errorf("too few arguments %v\n", len(cmd.Args))
+	}
+	url := cmd.Args[1]
+
+	ctx := context.Background()
+	if err := s.db.Deletefeedfollowrecord(ctx, database.DeletefeedfollowrecordParams{
+		UserID: user.ID,
+		Url: sql.NullString{String: url, Valid: true},	
+	}); err != nil {
+		return fmt.Errorf("error while unfollowing: %v\n", err)
+	}
+	return nil
+}
+
+func ScrapeFeed(s *state, cmd command, user database.User)error{
+	ctx := context.Background()
+nextFeed, err := s.db.GetNextFeedToFetch(ctx, uuid.NullUUID{UUID: user.ID, Valid: true,})
+	if err != nil {
+		return fmt.Errorf("error getting next feed: %v\n", err)
+	}
+
+	if err = s.db.MarkFeedFetched(ctx, nextFeed.ID); err != nil {
+		return fmt.Errorf("error marking feed: %v\n", err)
+	}
+
+	feed, err := fetchFeed(ctx, nextFeed.Url.String)
+	if err != nil{
+		return fmt.Errorf("error while fetching feed: %v\n", err)
+	}
+
+	for _, title := range feed.Channel.Item {
+		fmt.Println(title.Title)
+		fmt.Println("-------------------------------------------------------------------------------------------------------------------")
+	}
+
+	return nil
+}
+
 func middlewareLoggedIn(handler func(s * state, cmd command, user database.User) error) func(*state, command)error {
 	return func(s *state, cmd command)error {
 		user, err := s.db.GetUser(context.Background(), s.cfg.CurrentUserName)
@@ -216,3 +270,4 @@ func middlewareLoggedIn(handler func(s * state, cmd command, user database.User)
 		return handler(s, cmd, user)
 	}
 }
+

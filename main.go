@@ -41,11 +41,12 @@ func main(){
 	cmds.register("register", registerUser)
 	cmds.register("reset", resetTable)
 	cmds.register("users", getAllUsers)
-	cmds.register("agg", handlerAgg)
+	cmds.register("agg", middlewareLoggedIn(handlerAgg))
 	cmds.register("addfeed", middlewareLoggedIn(addFeed))
 	cmds.register("feeds", handlerFeeds)
 	cmds.register("follow", middlewareLoggedIn(handlerFollow))
 	cmds.register("following", middlewareLoggedIn(handlerFollowing))
+	cmds.register("unfollow", middlewareLoggedIn(handlerUnfollow))
 
 	if len(os.Args) < 2 {
 		log.Fatal("no command given")
