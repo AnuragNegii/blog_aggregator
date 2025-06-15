@@ -2,13 +2,18 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
+	"strconv"
+	"strings"
 	"time"
-	"database/sql"
 
 	"github.com/AnuragNegii/blog_aggreagator/internal/database"
+	"github.com/araddon/dateparse"
 	"github.com/google/uuid"
+	"github.com/lib/pq"
+	"golang.org/x/net/html"
 )
 
 func resetTable(s *state, cmd command) error{
@@ -239,7 +244,7 @@ func handlerUnfollow(s *state, cmd command, user database.User) error{
 
 func ScrapeFeed(s *state, cmd command, user database.User)error{
 	ctx := context.Background()
-nextFeed, err := s.db.GetNextFeedToFetch(ctx, uuid.NullUUID{UUID: user.ID, Valid: true,})
+	nextFeed, err := s.db.GetNextFeedToFetch(ctx, uuid.NullUUID{UUID: user.ID, Valid: true,})
 	if err != nil {
 		return fmt.Errorf("error getting next feed: %v\n", err)
 	}
@@ -253,9 +258,55 @@ nextFeed, err := s.db.GetNextFeedToFetch(ctx, uuid.NullUUID{UUID: user.ID, Valid
 		return fmt.Errorf("error while fetching feed: %v\n", err)
 	}
 
-	for _, title := range feed.Channel.Item {
-		fmt.Println(title.Title)
-		fmt.Println("-------------------------------------------------------------------------------------------------------------------")
+	for _, item := range feed.Channel.Item{
+		t, err := dateparse.ParseAny(item.PubDate)
+		if err != nil {
+			fmt.Printf("error parsing PubDateL %v\n", err)
+			t = time.Now()
+		}
+		if err := s.db.CreatePost(ctx, database.CreatePostParams{
+			ID: uuid.New(),
+			Title: item.Title,
+			Url: item.Link,
+			Description: item.Description,
+			PublishedAt: t,
+			FeedID: nextFeed.ID,
+		}); err != nil{
+			var pqError *pq.Error
+			if errors.As(err, &pqError){
+				if pqError.Code == "23505"{
+					continue
+				}else{
+					return fmt.Errorf("error creating feed: %v\n", err)
+				}
+			}
+		}
+
+	} 
+	return nil
+}
+
+func handlerBrowse(s *state, cmd command, user database.User)error{
+	limit := 2
+	if len(cmd.Args) > 1 {
+    l, err := strconv.Atoi(cmd.Args[1])
+    if err == nil {
+		limit = l
+    	}
+	}
+	ctx := context.Background()
+	datab, err := s.db.GetPostsForUsers(ctx, database.GetPostsForUsersParams{
+		UserID: user.ID,	
+		Limit: int32(limit),
+	})
+	if err != nil {
+		return fmt.Errorf("error browsing database: %v\n", err)
+	}
+	for _, data := range datab{
+		fmt.Printf("%v\n",data.Title)
+		fmt.Printf("%v\n",htmlToText(data.Description))
+		fmt.Printf("%v\n",data.PublishedAt)
+		fmt.Println("-----------------------------------------------")
 	}
 
 	return nil
@@ -271,3 +322,21 @@ func middlewareLoggedIn(handler func(s * state, cmd command, user database.User)
 	}
 }
 
+func htmlToText(htmlStr string) string {
+    doc, err := html.Parse(strings.NewReader(htmlStr))
+    if err != nil {
+        return htmlStr // fallback if parsing fails
+    }
+    var f func(*html.Node) string
+    f = func(n *html.Node) string {
+        if n.Type == html.TextNode {
+            return n.Data
+        }
+        var out string
+        for c := n.FirstChild; c != nil; c = c.NextSibling {
+            out += f(c)
+        }
+        return out
+    }
+    return f(doc)
+}

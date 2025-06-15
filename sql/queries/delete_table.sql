@@ -1,2 +1,2 @@
 -- name: DeleteTable :exec
-TRUNCATE TABLE feed_follows, feeds, users;
+TRUNCATE TABLE posts, feed_follows, feeds, users;
