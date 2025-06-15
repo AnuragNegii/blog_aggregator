@@ -1,3 +1,4 @@
+gator
 1. You need to install Postgres and go to your system
 2. clone the repo.
 3. You also need to install goose in your folder using this "go install github.com/pressly/goose/v3/cmd/goose@latest"
